@@ -1,0 +1,92 @@
+#!/bin/bash
+
+BASEPATH="$(dirname $0)"
+BUILD="$BASEPATH/bin"
+
+if [ -d $BUILD ]; then
+	while true; do
+		read -p "Remove existing bin directory? [y/N] " rembin
+		[[ -z "$rembin" ]] && rembin="n"
+	
+		if [ "$rembin" == "n" ] || [ "$rembin" == "N" ]; then
+			break
+		elif [ "$rembin" == "y" ] || [ "$rembin" == "Y" ]; then
+			rm -rf $BUILD
+			break
+		else
+			continue
+		fi
+	done
+fi
+
+[[ -f $BASEPATH/install.sh ]] && rm $BASEPATH/install.sh
+
+[[ ! -d $BUILD ]] && mkdir $BUILD
+
+read -p "Enter ALSA mixer name [Master]: " mixername
+[[ -z "$mixername" ]] && mixername="Master"
+
+read -p "Enter volume step value [10]: " volstep
+[[ -z "$volstep" ]] && volstep="10"
+
+while true; do
+	read -p "Enter VLC MRL for TV capture device: " mrl
+	[[ -n "$mrl" ]] && break
+done
+
+while true; do
+	read -p "Enter VLC options for TV capture device: " vlcopt
+	[[ -n "$vlcopt" ]] && break
+done
+
+while true; do
+	read -p "Enter path for M3U radio playlist: " plpath
+	[[ -n "$plpath" ]] && break
+done
+
+read -p "Enter installation path [/usr/local/tv-app]: " instpath
+[[ -z "$instpath" ]] && instpath="/usr/local/tv-app"
+
+printf "Building templates..."
+
+m4 -DMIXERNAME="$mixername" -DVOLSTEPVAL="$volstep" $BASEPATH/m4/volume.sh.m4 > $BUILD/volume.sh
+chmod +x $BUILD/volume.sh
+
+m4 -DMRLVAL="$mrl" -DOPTSVAL="$vlcopt" $BASEPATH/m4/tv.sh.m4 > $BUILD/tv.sh
+chmod +x $BUILD/tv.sh
+
+m4 -DPLPATH="$plpath" $BASEPATH/m4/radio-gui.sh.m4 > $BUILD/radio-gui.sh
+chmod +x $BUILD/radio-gui.sh
+
+m4 -DINSTPATH="$instpath" $BASEPATH/m4/start.sh.m4 > $BUILD/start.sh
+chmod +x $BUILD/start.sh
+
+printf "done\n"
+
+printf "Copying src/artifacts..."
+
+cp $BASEPATH/src/* $BUILD
+chmod +x $BUILD/*sh
+
+mkdir $BUILD/icons
+cp $BASEPATH/icons/* $BUILD/icons
+
+printf "done\n"
+
+printf "Building installer..."
+
+cat <<HERE > $BASEPATH/install.sh
+#!/bin/bash
+
+printf "Installing into $instpath..."
+
+[[ ! -d $instpath ]] && mkdir $instpath
+
+cp -R $BUILD/* $instpath
+
+printf "done\n"
+HERE
+
+chmod +x $BASEPATH/install.sh
+
+printf "done\n"

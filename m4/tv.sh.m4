@@ -1,0 +1,6 @@
+#!/bin/bash
+
+MRL="MRLVAL"
+OPTIONS="OPTSVAL"
+
+vlc -f $MRL$OPTIONS
